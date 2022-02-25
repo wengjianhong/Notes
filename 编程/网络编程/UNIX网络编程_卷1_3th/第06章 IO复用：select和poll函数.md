@@ -106,88 +106,6 @@ struct timeval{
 
 
 
-#### 3.1.2 使用select实现客户端（修订版1）
-
-```cpp
-// tcpcli06_select.c
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <iostream>
-
-#define SA          struct sockaddr
-#define SERV_PORT   8888
-#define MAXLINE     4096   /* max text line length */
-using namespace std;
-
-void err_quit(const char *fmt, ...) {
-    std::cout << fmt << endl;
-    _exit(1);
-}
-
-void str_cli(FILE *fp, int sockfd) {
-    int     nfds;
-    fd_set  rset;
-    char    sendline[MAXLINE], recvline[MAXLINE];
-
-    FD_ZERO(&rset);
-    for( ; ; ){
-        FD_SET(sockfd, &rset);
-        FD_SET(fileno(fp), &rset);
-        nfds = max(sockfd, fileno(fp)) + 1;
-        select(nfds, &rset, nullptr, nullptr, nullptr);
-
-        if(FD_ISSET(sockfd, &rset)){
-            if(read(sockfd, recvline, MAXLINE) == 0)
-                err_quit("str_cli: server terminated prematurely");
-    
-            fputs(recvline, stdout);
-            memset(recvline, 0, sizeof(recvline));
-        }
-        if(FD_ISSET(fileno(fp), &rset)){
-            if(fgets(sendline, MAXLINE, fp) == NULL)
-                return;
-
-            write(sockfd, sendline, MAXLINE);
-        }
-
-
-    }
-    while (fgets(sendline, MAXLINE, fp) != NULL) {
-        write(sockfd, sendline, strlen(sendline));
-        if (read(sockfd, recvline, MAXLINE) == 0)
-            err_quit("str_cli: server terminated prematurely");
-
-        fputs(recvline, stdout);
-        memset(recvline, 0, sizeof(recvline));
-    }
-}
-
-int main(int argc, char** argv){
-    int sockfd;
-    struct sockaddr_in servaddr;
-
-    if(argc != 2){
-        err_quit("usage: tcpcli <IP ADDRESS>");
-    }
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(SERV_PORT);
-    inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
-    connect(sockfd, (SA*)&servaddr, sizeof(servaddr));
-    str_cli(stdin, sockfd);
-    _exit(0);
-}
-```
-
-> `tcpcli06_select.c`代码在`tcpcli01.c`代码基础上，修改`str_cli()`函数为`select()`的使用
-
-
-
 ### 3.2 shutdown函数
 
 引入`shutdown()`函数的原因是：`close()`函数关闭套接字需要满足两个限制条件：
@@ -205,12 +123,6 @@ int shutdown(int fd, int how);   // 成功返回0，出错返回-1
 - `SHUT_RD`: 关闭套接字读一半，不再接收数据并且丢弃缓冲区中现有数据，进程不可对该套接字进行读操作
 - `SHUT_WR`: 关闭套接字写一半，发送缓冲区现有数据后发送`FIN`，套接字将变成`半关闭`。
 - `SHUT_RDWR`: 关闭套接字读写，等价于先调用`SHUT_RD`，再调用`SHUT_WR`。
-
-#### 3.2.1 使用shutdown实现客户端（修订版2）
-
-
-
-#### 3.2.1 使用shutdown实现服务端（修订版1）
 
 
 
@@ -267,15 +179,196 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout); // 返回：正整数表
 
 
 
+### 3.5 同时处理多个事件——使用select实现客户端（修订版1）
+
+在本章的概述中说到的`由于客户端阻塞在fget()函数，当服务端断开连接，客户端无法及时处理该响应，直到收控制台输入内容`。代码`tcpcli06_select.c`是在`tcpcli01.c`代码基础上，使用`select()`函数改造`str_cli()`函数后解决该问题。
+
+```cpp
+// tcpcli06_select.c
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdio.h>
+#include <iostream>
+
+#define SA          struct sockaddr
+#define SERV_PORT   8888
+#define MAXLINE     4096   /* max text line length */
+using namespace std;
+
+void err_quit(const char *fmt, ...) {
+    std::cout << fmt << endl;
+    _exit(1);
+}
+
+void str_cli(FILE *fp, int sockfd) {
+    int     nfds;
+    fd_set  rset;
+    char    sendline[MAXLINE], recvline[MAXLINE];
+
+    FD_ZERO(&rset);
+    for( ; ; ){
+        FD_SET(sockfd, &rset);
+        FD_SET(fileno(fp), &rset);
+        nfds = max(sockfd, fileno(fp)) + 1;
+        select(nfds, &rset, nullptr, nullptr, nullptr);
+
+        if(FD_ISSET(sockfd, &rset)){
+            if(read(sockfd, recvline, MAXLINE) == 0)
+                err_quit("str_cli: server terminated prematurely");
+    
+            fputs(recvline, stdout);
+            memset(recvline, 0, sizeof(recvline));
+        }
+        if(FD_ISSET(fileno(fp), &rset)){
+            if(fgets(sendline, MAXLINE, fp) == NULL)
+                return;
+
+            write(sockfd, sendline, MAXLINE);
+        }
+    }
+}
+
+int main(int argc, char** argv){
+    int sockfd;
+    struct sockaddr_in servaddr;
+
+    if(argc != 2){
+        err_quit("usage: tcpcli <IP ADDRESS>");
+    }
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(SERV_PORT);
+    inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
+    connect(sockfd, (SA*)&servaddr, sizeof(servaddr));
+    str_cli(stdin, sockfd);
+    _exit(0);
+}
+```
+
+> `tcpcli06_select.c`代码在`tcpcli01.c`代码基础上，修改`str_cli()`函数为`select()`的使用。
 
 
-#### 3.4.1 使用poll实现服务端（修订版2）
+
+### 3.6 批量输入——使用shutdown实现客户端（修订版2）
+
+即便我们的程序功能很简单了，但在客户端的`修订版1`的`str_cli()`中仍然存在一些问题，尝试以下测试：
+
+```shell
+# 生成input文件
+[root@QingYun chapter06]# for i in {1..100}; do printf "$i %.0s" {1..10};echo ; done > input
+
+# 多次运行修订版本1，查看结果
+[root@QingYun chapter06]# cat input | ./tcpcli06_select.o 127.0.0.1
+```
+
+
+
+可以看到，客户端得到的输出内容总是少于input中的输入！！这是因为：
+
+- 在客户端使用批量输入，批量输入在很短的时间内完成输入，而客户完成处理一条信息明显需要更长的时间。
+- 并且在`str_cli()`函数中，一旦接收到客户端的`EOF`，客户端立即return返回main函数随后终止进程。
+
+因而导致客户端未完成处理和接收所有信息，客户端程序已经先退出了。
+
+解决这个问题我们只需要在客户端完成所有输入之后，关闭客户端socket的读一半连接，而保持socket可写的一半连接。代码`tcpcli06_select_shutdown.c`为使用`shutdown()`改造后的客户端`修改版2`。
+
+
+
+```cpp
+// tcpcli06_select_shutdown.c
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdio.h>
+#include <iostream>
+
+#define SA          struct sockaddr
+#define SERV_PORT   8888
+#define MAXLINE     4096   /* max text line length */
+using namespace std;
+
+void err_quit(const char *fmt, ...) {
+    std::cout << fmt << endl;
+    _exit(1);
+}
+
+void str_cli(FILE *fp, int sockfd) {
+    fd_set  rset;
+    int     nfds, stdinEof = 0;
+    char    sendline[MAXLINE], recvline[MAXLINE];
+
+    FD_ZERO(&rset);
+    for( ; ; ){
+        FD_SET(sockfd, &rset);
+        if(stdinEof==0) FD_SET(fileno(fp), &rset);
+
+        nfds = max(sockfd, fileno(fp)) + 1;
+        select(nfds, &rset, nullptr, nullptr, nullptr);
+
+        if(FD_ISSET(sockfd, &rset)){
+            if(read(sockfd, recvline, MAXLINE) == 0){
+                if(stdinEof == 0) return;
+                else err_quit("str_cli: server terminated prematurely");
+            }
+
+            fputs(recvline, stdout);
+            memset(recvline, 0, sizeof(recvline));
+        }
+        if(FD_ISSET(fileno(fp), &rset)){
+            if(fgets(sendline, MAXLINE, fp) == NULL){
+                stdinEof = 1;
+                shutdown(sockfd, SHUT_WR);
+                FD_CLR(sockfd, &rset);
+            }
+            else write(sockfd, sendline, MAXLINE);
+        }
+    }
+    while (fgets(sendline, MAXLINE, fp) != NULL) {
+        write(sockfd, sendline, strlen(sendline));
+        if (read(sockfd, recvline, MAXLINE) == 0)
+            err_quit("str_cli: server terminated prematurely");
+
+        fputs(recvline, stdout);
+        memset(recvline, 0, sizeof(recvline));
+    }
+}
+
+int main(int argc, char** argv){
+    int sockfd;
+    struct sockaddr_in servaddr;
+
+    if(argc != 2){
+        err_quit("usage: tcpcli <IP ADDRESS>");
+    }
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(SERV_PORT);
+    inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
+    connect(sockfd, (SA*)&servaddr, sizeof(servaddr));
+    str_cli(stdin, sockfd);
+    _exit(0);
+}
+```
+
+> 执行`cat input | ./tcpcli06_select.o 127.0.0.1`，测试修改版2的客户端代码
+
+
+
+### 3.8 处理多个客户端——使用select实现服务端（修订版1）
+
+
+
+#### 拒绝服务型攻击
 
 
 
 
 
-
-
-### 3.5 缓冲区导致的隐患
-
+### 3.9 缓冲区
