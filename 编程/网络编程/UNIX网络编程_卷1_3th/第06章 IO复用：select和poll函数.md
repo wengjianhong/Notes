@@ -173,7 +173,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout); // 返回：正整数表
 
 `timeout`参数可能的取值有三种：
 
-- `INFTIM`：被定义为符数，表示无限等待
+- `INFTIM`：被定义为负数，表示无限等待
 - `0`：立即返回而不阻塞
 - `>0`：等待指定时间超时
 
@@ -363,12 +363,287 @@ int main(int argc, char** argv){
 
 ### 3.8 处理多个客户端——使用select实现服务端（修订版1）
 
+使用`select()`函数实现服务端程序，重写后的服务端同时处理多个客户端，不再需要为新的客户端连接创建新进程，重写后代码`tcpcli06_select.c`如下所示：
+
+```cpp
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <iostream>
+#include <signal.h>
+#include <wait.h>
+using namespace std;
+
+#define SERV_PORT   8888
+#define LISTENQ     1024
+#define	MAXLINE		4096	/* max text line length */
+#define SA struct sockaddr
+
+void err_quit(const char *fmt, ...) {
+    std::cout << fmt << endl;
+	_exit(1);
+}
+
+void str_echo(int sockfd) {
+    ssize_t n;
+    char buf[MAXLINE];
+
+again:
+    while ((n = read(sockfd, buf, MAXLINE)) > 0){
+        write(sockfd, buf, n);
+        memset(buf, 0, sizeof(buf));
+    }
+
+    if (n < 0 && errno == EINTR)
+        goto again;
+    else if (n < 0)
+        err_quit("str_echo: read error");
+    else
+        cout <<"n: " << n << ", errno: " << errno << endl;
+}
+
+void sig_chld(int signo){
+    pid_t pid;
+    int   stat;
+    while((pid = wait(&stat)) > 0)
+    printf("child %d terminated\n", pid);
+    return;
+}
+
+int main(int argc, char **argv) {
+    int i, maxi, maxfd, nready;
+    int sockfd, listenfd, connfd, client[FD_SETSIZE]; // client[]: 客户端套接字描述符数组
+
+    socklen_t clilen;
+    fd_set allset, readset;
+    struct sockaddr_in cliaddr, servaddr;
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(SERV_PORT);
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    bind(listenfd, (SA *)&servaddr, sizeof(servaddr));
+    listen(listenfd, LISTENQ);
+    
+    maxi = -1;
+    maxfd = listenfd;
+    memset(client, -1, sizeof(client));
+
+    FD_ZERO(&allset);
+    FD_SET(listenfd, &allset);
+
+    ssize_t n;
+    char buf[MAXLINE];
+
+    for( ; ; ){
+        readset = allset;
+        nready = select(maxfd+1, &readset, NULL, NULL, NULL);
+        if(FD_ISSET(listenfd, &readset)){
+            clilen = sizeof(cliaddr);
+            connfd = accept(listenfd, (SA*)&cliaddr, &clilen);
+
+            for(i=0;i<FD_SETSIZE; i++){
+                if(client[i]==-1){
+                    client[i] = connfd;
+                    cout << "connected: " << connfd << endl;
+                    break;
+                }
+            }
+
+            if(i == FD_SETSIZE){
+                cout << ("too many clients.") << endl;
+                continue;
+            }
+            else{
+                FD_SET(connfd, &allset);
+                maxi = (i > maxi) ? i : maxi;
+                maxfd = (connfd > maxfd) ? connfd : maxfd;
+            }
+            
+            if(--nready <= 0)
+                continue;
+        }
+
+        for(int i=0; i<=maxi; i++){
+            if( (sockfd = client[i]) < 0)
+                continue;
+
+            if(FD_ISSET(sockfd, &readset)){
+                if( (n=read(sockfd, buf, MAXLINE) ) == 0){
+                    cout << "close: client" << sockfd << endl;
+                    close(sockfd);
+                    FD_CLR(sockfd, &allset);
+                    client[i] = -1;
+                }
+                else{
+                    cout << "client" << sockfd << ": " << buf;
+                    write(sockfd, buf, n);
+                }
+
+                if(--nready <= 0)
+                    break;
+            }
+        }
+    }
+}
+```
+
 
 
 #### 拒绝服务型攻击
 
+上述的程序中看似没有问题，实际上还是存在风险。考虑以下，如果一个恶意的客户端连接到服务器，发送一个字节后（不是换行符）后进入睡眠，将会发生睡眠？
+
+服务端调用read，从套接字读入单字节数据，然后阻在下一个`read()`等待客户的其余数据。于是服务端将阻塞与该客户并且无法为其他的客户提供服务，直到恶意客户端终止。
+
+因此，需要注意的是：一个服务器处理多个客户时，`绝对不能` 阻塞于至于单个客户相关的某个函数调用，否则可能导致服务器被挂起，拒绝为所有其他客户听服务。可能的姐姐方法包括：
+
+- 使用非阻塞式IO（第16章）
+- 让每个客户由单独的线程提供服务
+- 对IO设置超时（14.2节）
+
+### 3.9 处理多个客户端——使用poll实现服务端（修订版2）
+
+```cpp
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <iostream>
+#include <signal.h>
+#include <wait.h>
+#include <poll.h>
+#include <limits>
+using namespace std;
+
+#define INFTIM      -1
+#define OPEN_MAX    3
+#define SERV_PORT   8888
+#define LISTENQ     1024
+#define	MAXLINE		4096	/* max text line length */
+#define SA struct sockaddr
+
+void err_quit(const char *fmt, ...) {
+    std::cout << fmt << endl;
+	_exit(1);
+}
+
+void str_echo(int sockfd) {
+    ssize_t n;
+    char buf[MAXLINE];
+
+again:
+    while ((n = read(sockfd, buf, MAXLINE)) > 0){
+        write(sockfd, buf, n);
+        memset(buf, 0, sizeof(buf));
+    }
+
+    if (n < 0 && errno == EINTR)
+        goto again;
+    else if (n < 0)
+        err_quit("str_echo: read error");
+    else
+        cout <<"n: " << n << ", errno: " << errno << endl;
+}
+
+void sig_chld(int signo){
+    pid_t pid;
+    int   stat;
+    while((pid = wait(&stat)) > 0)
+    printf("child %d terminated\n", pid);
+    return;
+}
+
+int main(int argc, char **argv) {
+    int i, maxi, nready, sockfd, listenfd, connfd;
+
+    socklen_t clilen;
+    struct pollfd client[OPEN_MAX];
+    struct sockaddr_in cliaddr, servaddr;
+
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(SERV_PORT);
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    bind(listenfd, (SA *)&servaddr, sizeof(servaddr));
+    listen(listenfd, LISTENQ);
+    
+    maxi = 0;
+    client[0].fd = listenfd;
+    client[0].events = POLLRDNORM;
+    for(int i=1;i<OPEN_MAX;i++) client[i].fd = -1;
+
+    ssize_t n;
+    char buf[MAXLINE];
+
+    for( ; ; ){
+        nready = poll(client, maxi+1, INFTIM);
+        
+        if(client[0].revents & POLLRDNORM){
+            clilen = sizeof(cliaddr);
+            connfd = accept(listenfd, (SA*)&cliaddr, &clilen);
+
+            for(i=1;i<OPEN_MAX;i++){
+                if(client[i].fd < 0){
+                    cout << "connected: " << connfd << endl;
+                    client[i].fd = connfd;
+                    break;
+                }
+            }
+
+            if(i >= OPEN_MAX){
+                cout << "too many client, refuse: " << connfd << endl;
+                continue;
+            }
+            else{
+                maxi = max(maxi, i);
+                client[i].events = POLLRDNORM;
+            }
+
+            if(--nready <= 0) continue;
+        }
+
+        for(int i=0; i<=maxi; i++){
+            if( (sockfd = client[i].fd) < 0)
+                continue;
+            
+            if(client[i].revents & (POLLRDNORM | POLLERR)){
+                if( (n=read(sockfd, buf, MAXLINE) ) < 0){
+                    if(errno == ECONNRESET){
+                        close(sockfd);
+                        client[i].fd = -1;
+                        cout << "close: client" << sockfd << endl;
+                    }
+                    else
+                        cout << "read error." << endl;
+                }
+                else if (n == 0) {
+                    close(sockfd);
+                    client[i].fd = -1;
+                    cout << "close: client" << sockfd << endl;
+                }
+                else{
+                    cout << "client" << sockfd << ": " << buf;
+                    write(sockfd, buf, n);
+                }
+
+                if(--nready <= 0)
+                    break;
+            }
+        }
+    }
+}
+```
 
 
 
-
-### 3.9 缓冲区
