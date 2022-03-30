@@ -42,18 +42,3 @@
 
 - [HDF5](./编程/C++/HDF5)
 
-
-
-## [面经](./面经)
-
-- [C++](./面经/C++.md)
-- [网络](./面经/网络.md)
-- [操作系统](./面经/操作系统.md)
-- [数学智力题](./面经/数学智力题.md)
-
-
-
-转载：https://github.com/arkingc/note/tree/master/interview
-
-更多面经：https://github.com/wengjianhong/Kunlun/tree/master/PDF/%E9%9D%A2%E7%BB%8F
-
