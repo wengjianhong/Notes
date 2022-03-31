@@ -149,15 +149,29 @@
 12）volatile?（对象的值可能在程序的控制外被改变时，应将变量申明为volatile，告诉编译器不应对这样的对象进行优化，如果优化，从内存读取后CPU会优先访问数据在寄存器中的结果，但是内存中的数据可能在程序之外被改变、可以既是const又是volatile，const只是告诉程序不能试图去修改它.volatile是告诉编译器不要优化，因为变量可能在程序外部被改变）
 ## 八.其它
 1）调试程序的方法?（[gdb](https://github.com/arkingc/note/blob/master/Linux/Linux%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4.md#3%E8%B0%83%E8%AF%95%E5%B7%A5%E5%85%B7gdb)）
+
 2）遇到coredump要怎么调试？
+
 3）模板的用法与适用场景
+
 4）用过C++11？新特性？（auto,decltype、explicit、[lambda](https://mubu.com/doc/1ckW18B1Ak)、final）
+
 5）[函数调用的压栈过程](https://arkingc.github.io/2018/01/12/c-stack_frame/)
+
 6）[sizeof](https://github.com/arkingc/llc/blob/master/cpp/sizeof.cpp#L4)和strlen的区别？（运算符与函数、计算的对象、编译时运行时）
+
 7）union？
+
 8）覆盖、重载与隐藏（覆盖要求参数完全相同，用于继承体系的虚函数中，重载要求参数不同）
+
 9）C++是不是类型安全的？（不是，两个不同类型指针可以强制转换）
+
 10）gcc和g++的区别？（gcc代表GUN Compiler Collection，是一堆编译器的集合，包括g++）
+
 11）[运行时类型识别实现对象比较函数](https://github.com/arkingc/llc/blob/master/cpp/RTTI/RTTI.cpp#L9)
+
 12）[使用C++实现线程安全的单例模式](https://www.cnblogs.com/ccdev/archive/2012/12/19/2825355.html)
+
 13）[什么是异常安全？](../C++/EffectiveC++.md#1异常安全的2个条件)
+
+14）GCC优化等级

@@ -1,10 +1,29 @@
 
 
+## 1. 安装配置
 
+### 编译安装
 
-## 安装配置
+```shell
+$ wget https://github.com/libevent/libevent/releases/download/release-2.1.11-stable/libevent-2.1.11-stable.tar.gz
+$ tar -zxvf libevent-2.1.11-stable.tar.gz
+$ cd libevent-2.1.11-stable/
+$ ./configure
+$ make
+$ sudo make install
+```
 
-### hello_world
+> 官方网站：https://libevent.org/
+
+### 验证安装
+
+```shell
+[root@QingYun libevent]# whereis libevent
+libevent: /usr/local/lib/libevent.so /usr/local/lib/libevent.la /usr/local/lib/libevent.a
+[root@QingYun libevent]#
+```
+
+### 运行官方demo
 
 ```shell
 # 安装目录的sample路径下，启动服务端
@@ -19,9 +38,104 @@ Hello, World!
 
 
 
-## 常用函数
+## 2. 第一个实例
 
-### 创建event
+### hello_event.cpp
+
+```cpp
+#include <stdio.h>
+//使用libevent库所需头文件  
+#include <event.h>  
+ 
+void on_time(int sock,short event,void *arg)  
+{  
+    printf("hello world\n");  
+ 
+    struct timeval tv;  
+    tv.tv_sec = 1;  
+    tv.tv_usec = 0;  
+ 
+    // 事件执行后,默认就被删除,所以需要重新添加  
+    event_add((struct event*)arg, &tv);  
+}  
+ 
+int main()  
+{  
+    //  初始化事件  
+    event_init();  
+ 
+    //  设置定时器回调函数  
+    struct event ev_time;  
+    evtimer_set(&ev_time, on_time, &ev_time);  
+ 
+    //1s运行一次func函数
+    struct timeval tv;  
+    tv.tv_sec = 1;  
+    tv.tv_usec = 0;  
+ 
+    //添加到事件循环中
+    event_add(&ev_time, &tv);  
+ 
+    //程序等待就绪事件并执行事件处理
+    event_dispatch();  
+ 
+    return 0;  
+}  
+```
+
+### CMakeLists.txt
+
+```cmake
+cmake_minimum_required(VERSION 2.8)
+
+SET(CMAKE_BUILD_TYPE DEBUG)
+SET(CMAKE_CXX_STANDARD 11)
+PROJECT(test_event)
+
+INCLUDE_DIRECTORIES(/usr/local/include)
+
+ADD_EXECUTABLE(hello_event hello_event.cpp)
+
+LINK_DIRECTORIES(/usr/local/lib)
+TARGET_LINK_LIBRARIES(hello_event libevent.a)
+```
+
+### 编译运行
+
+使用g++直接编译
+
+```shell
+[root@QingYun test_event]# g++ hello_event.cpp -levent -o hello_event
+```
+
+使用cmake编译
+
+```shell
+[root@QingYun build]# cmake ..
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /root/git/Test/test_event/build
+[root@QingYun build]# make
+Linking CXX executable hello_event
+[100%] Built target hello_event
+```
+
+运行结果
+
+```shell
+[root@QingYun build]# ./hello_event 
+hello world
+hello world
+hello world
+hello world
+...
+```
+
+
+
+## 3. 常用函数
+
+### 创建事件
 
 ```cpp
 struct event* event_new	(
