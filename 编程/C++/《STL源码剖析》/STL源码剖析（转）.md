@@ -66,6 +66,8 @@
 <br>
 <br>
 
+
+
 # 一.简介
 
 ## 1.GNU源代码开放精神
@@ -119,7 +121,7 @@
 
 不同的编译器**对C++语言的支持程度**不尽相同。作为一个希望具备广泛移植能力的程序库，SGI STL准备了一个**环境组态文件**[<stl_config.h>](tass-sgi-stl-2.91.57-source/stl_config.h)，其中定义了许多常量，标示某些组态的成立与否，所有STL头文件都会直接或间接包含这个组态文件，并以条件式写法，让预处理器根据各个常量决定取舍哪一段程序代码，例如：
 
-<div align="center"> <img src="../pic/stl-1-2.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-1-2.png"/> </div>
 
 **组态测试程序**：
 
@@ -136,7 +138,7 @@
 
 ## 4.STL六大部件
 
-<div align="center"> <img src="../pic/stl-1-1.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-1-1.png"/> </div>
 
 最重要的2个是**容器**与**算法**
 
@@ -230,7 +232,7 @@ void allocator::destroy(pointer p)
 
 STL标准规定分配器定义于```<memory>```中，SGI```<memory>```内含两个文件，负责分离的2阶段操作
 
-<div align="center"> <img src="../pic/stl-2-1.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-1.png"/> </div>
 
 > 真正在SGI STL中大显身手的分配器（即SGI特殊的空间分配器std::alloc）或为第一级分配器，或为第二级分配器
 
@@ -238,7 +240,7 @@ STL标准规定分配器定义于```<memory>```中，SGI```<memory>```内含两�
 
 [<stl_construct.h>](tass-sgi-stl-2.91.57-source/stl_construct.h)
 
-<div align="center"> <img src="../pic/stl-2-2.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-2.png"/> </div>
 
 > STL规定分配器必须拥有名为construct()和destroy()的两个成员函数，然而SGI特殊的空间分配器std::alloc并未遵守这一规则，所以实际上这部分属于STL allocator，但不属于std::alloc。换句话说，SGI特殊的空间分配器std::alloc不包含”3.1 对象构造与析构“，只包含”3.2 内存分配与释放“
 
@@ -257,7 +259,7 @@ SGI对内存分配与释放的设计哲学如下：
 
 考虑到小型区块所可能造成的内存碎片问题，SGI设计了双层级分配器：
 
-<div align="center"> <img src="../pic/stl-2-3.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-3.png"/> </div>
 
 * 第一级分配器
     - 直接使用malloc()和free()
@@ -285,7 +287,7 @@ public:
 
 内部4个函数都是转调用分配器的成员函数。**这个接口使分配器的分配单位从bytes转为个别元素的大小**
 
-<div align="center"> <img src="../pic/stl-2-4.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-4.png"/> </div>
 
 > 上图中Alloc=alloc中的缺省alloc可以是第一级分配器，也可以是第二级分配器。SGI STL已经把它设为第二级分配器
 
@@ -393,7 +395,7 @@ void * __malloc_alloc_template<inst>::oom_realloc(void *p, size_t n)
 * 产生内存碎片
 * 额外负担。额外负担是一些区块信息，用以管理内存。区块越小，额外负担所占的比例就越大，越显浪费
 
-<div align="center"> <img src="../pic/stl-2-5.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-5.png"/> </div>
 
 * 当区块大于128bytes时，视为大区块
     - 转交第一级分配器处理
@@ -413,7 +415,7 @@ union obj{
 
 下图是free-list的实现技巧：
 
-<div align="center"> <img src="../pic/stl-2-6.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-6.png"/> </div>
 
 第二级分配器__default_alloc_template也定义在头文件[<stl_alloc.h>](tass-sgi-stl-2.91.57-source/stl_alloc.h)中，以下为部分实现：
 
@@ -489,13 +491,13 @@ __default_alloc_template<threads, inst> ::free_list[__NFREELISTS] =
         + 若free-list之内有可用的区块，则直接使用
         + 若free-list之内没有可用区块，将区块大小调至8倍数边界，调用refill()，准备为free-list重新填充空间
 
-<div align="center"> <img src="../pic/stl-2-7.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-7.png"/> </div>
 
  * 空间释放函数[deallocate()](tass-sgi-stl-2.91.57-source/stl_alloc.h#L433)
      - 若区块大于128bytes，就调用第一级分配器
      - 若区块小于128bytes，找出对应的free-list，将区块回收
      
-<div align="center"> <img src="../pic/stl-2-8.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-8.png"/> </div>
 
 * 重新填充free-list的函数[refill()](tass-sgi-stl-2.91.57-source/stl_alloc.h#L537)
     - 若free-list中没有可用区块时，会调用chunk_alloc**从内存池**中申请空间重新填充free-list。缺省申请20个新节点(新区块)，如果内存池空间不足，获得的节点数可能小于20
@@ -510,7 +512,7 @@ __default_alloc_template<threads, inst> ::free_list[__NFREELISTS] =
         + 如果malloc()获取失败，chunk_alloc()就四处寻找有无”尚有未用且区块足够大“的free-list。找到了就挖出一块交出
         + 如果上一步仍未成功，那么就调用第一级分配器，第一级分配器有out-of-memory处理机制，或许有机会释放其它的内存拿来此处使用。如果可以，就成功，否则抛出bad_alloc异常
     
-    <div align="center"> <img src="../pic/stl-2-9.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-9.png"/> </div>
 
     上图中，一开始就调用chunk_alloc(32,20)，于是malloc()分配40个32bytes区块，其中第1个交出，另19个交给free-list[3]维护，余20个留给内存池；接下来客户调用chunk_alloc(64,20)，此时free_list[7]空空如也，必须向内存池申请。内存池只能供应(32\*20)/64=10个64bytes区块，就把这10个区块返回，第1个交给客户，余9个由free_list[7]维护。此时内存池全空。接下来再调用chunk_alloc(96,20)，此时free-list[11]空空如也，必须向内存池申请。而内存池此时也为空，于是以malloc()分配40+n(附加量)个96bytes区块，其中第1个交出，另19个交给free-list[11]维护，余20+n(附加量)个区块留给内存池...
 
@@ -531,7 +533,7 @@ STL定义了5个全局函数，作用于未初始化空间上，有助于容器�
 1. 分配内存区块，足以包含范围内的所有元素
 2. 调用上述3个函数在全区间范围内构造对象（因此，这3个函数使我们能够将内存的分配与对象的构造行为分离；并且3个函数都具有”commit or rollback“语意，要么所有对象都构造成功，要么一个都没有构造）
 
-<div align="center"> <img src="../pic/stl-2-10.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-2-10.png"/> </div>
 
 <br>
 
@@ -541,7 +543,7 @@ STL定义了5个全局函数，作用于未初始化空间上，有助于容器�
 
 在算法中运用迭代器时，很可能会用到其相应类型。所谓相应类型，迭代器所指之物的类型便是其中之一，算法可以在函数体中使用迭代器所指之物的类型来定义变量，也可能将迭代器所指之物的类型作为算法的返回值：
 
-<div align="center"> <img src="../pic/stl-3-1.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-3-1.png"/> </div>
 
 * **在函数体中使用迭代器所指之物的类型**
     - C++支持sizeof()，但并未支持typeof()。即便动用RTTI性质中的typeid()，获得的也只是类型名称，不能拿来做变量声明
@@ -556,13 +558,13 @@ STL定义了5个全局函数，作用于未初始化空间上，有助于容器�
 
 上一节所使用的方法，在value type作为返回类型时，无法处理非类类型的原生指针。下图使用traits来解决，使用了模板偏特化来处理非类类型的原生指针：
 
-<div align="center"> <img src="../pic/stl-3-2.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-3-2.png"/> </div>
 
 <br>
 
 现在，不论面对的是迭代器MyIter，或是原生指针int\*或const int\*，都可以通过traits取出正确的value type
 
-<div align="center"> <img src="../pic/stl-3-3.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-3-3.png"/> </div>
 
 > 当然，若要“特性萃取机”traits能够有效运作，每一个迭代器必须遵循约定，自行以内嵌类型定义的方式定义出相应类型。这是一个约定，谁不遵守这个约定，谁就不能兼容于STL这个大家庭
 
@@ -574,7 +576,7 @@ STL定义了5个全局函数，作用于未初始化空间上，有助于容器�
 4. **reference**：如果value type是T，那么reference就是T的引用
 5. **iterator category**：迭代器的类型（[详见](#21-迭代器类型)）
 
-    <div align="center"> <img src="../pic/stl-3-4.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-3-4.png"/> </div>
 
 如果希望开发的容器能与STL相容，一定要为容器定义这5种相应类型。“特性萃取机”traits会很忠实地将特性萃取出来：
 
@@ -647,7 +649,7 @@ value_type(const Iterator&) {
 
 设计算法时，如果可能，尽量针对某种迭代器提供一个明确定义，并针对更强化的某种迭代器提供另一种定义，这样才能在不同情况下提供最大效率，如下图的advanced()函数，用于移动迭代器：
 
-<div align="center"> <img src="../pic/stl-3-5.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-3-5.png"/> </div>
 
 在上图中，每个__advance()的最后一个参数都只声明类型，并未指定参数名称，因为它纯粹只是用来激活重载机制，函数之中根本不使用该参数。如果加上参数名称也没有错，但是没必要
 
@@ -709,13 +711,13 @@ struct __false_type { };
 
 模板类__type_traits的泛化与特化/偏特化见下图：
 
-<div align="center"> <img src="../pic/stl-3-6.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-3-6.png"/> </div>
 
 <br>
 
 # 四.顺序容器
 
-<div align="center"> <img src="../pic/stl-4-1.jpeg"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-1.jpeg"/> </div>
 
 上图中的“衍生”并非“派生”，而是内含关系。例如heap内含一个vector，priority-queue内含一个heap，stack和queue都含一个deque，set/map/multiset/multimap都内含一个RB-tree，has_x都内含一个hashtable
 
@@ -725,7 +727,7 @@ array是静态空间，一旦配置了就不能改变；vector与array非常相�
 
 SGI STL中[vector的定义](tass-sgi-stl-2.91.57-source/stl_vector.h#L12)
 
-<div align="center"> <img src="../pic/stl-4-2.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-2.png"/> </div>
 
 ### 1.1 迭代器
 
@@ -778,7 +780,7 @@ SGI STL中[list的定义](tass-sgi-stl-2.91.57-source/stl_list.h#L124)
 
 ### 2.1 节点
 
-<div align="center"> <img src="../pic/stl-4-3.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-3.png"/> </div>
 
 ```c++
 template <class T>
@@ -796,7 +798,7 @@ list不再能够像vector一样以普通指针作为迭代器，因为其节点�
 
 list迭代器必须有能力指向list的节点，并有能力进行正确的递增、递减、取值、成员存取等操作。list中，迭代器与节点的关系见下图：
 
-<div align="center"> <img src="../pic/stl-4-4.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-4.png"/> </div>
 
 由于STL list是一个双向链表，迭代器必须具备前移、后移的能力，所以list提供的是Bidirectional Iterators
 
@@ -882,7 +884,7 @@ size_type size() const {
 }
 ```
 
-<div align="center"> <img src="../pic/stl-4-5.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-5.png"/> </div>
 
 ### 2.4 分配器
 
@@ -918,7 +920,7 @@ protected:
 * 链表拼接：[splice](tass-sgi-stl-2.91.57-source/stl_list.h#L328)
     - 将[first,last)内的元素移动到position之前：[transfer](tass-sgi-stl-2.91.57-source/stl_list.h#L315)（[first,last)区间可以在同一个list之中，transfer并非公开接口，公开的是splice）
     
-    <div align="center"> <img src="../pic/stl-4-6.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-6.png"/> </div>
 
 ## 3.deque
 
@@ -979,7 +981,7 @@ struct __deque_iterator {   //未继承std::iterator
 
 deque采用一块所谓的map作为**主控(中控器)**。这里所谓的map是指一小块连续空间，其中每个元素都是一个指针，指向另一段（较大的）连续线性空间，称为缓冲区。缓冲区才是deque的存储空间主体。SGI STL允许我们指定缓冲区大小，默认值0表示使用512bytes缓冲区
 
-<div align="center"> <img src="../pic/stl-4-7.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-7.png"/> </div>
 
 deque除了维护一个指向map的指针外，也维护start，finish两个迭代器。分别指向第一缓冲区的第一个元素和最后缓冲区的最后一个元素（的下一位置）。此外，也必须记住目前的map大小。因为一旦map所提供的节点不足，就必须重新配置更大的一块map
 
@@ -1012,7 +1014,7 @@ protected:  //Data members
 
 deque的中控器、缓冲区、迭代器的关系如下图：
 
-<div align="center"> <img src="../pic/stl-4-8.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-8.png"/> </div>
 
 ### 3.4 分配器
 
@@ -1162,18 +1164,18 @@ heap是一颗完全二叉树，完全二叉树使用数组实现，因此使用�
     - [__push_heap_aux](tass-sgi-stl-2.91.57-source/stl_heap.h#L53)
         + [__push_heap](tass-sgi-stl-2.91.57-source/stl_heap.h#L40)
     
-    <div align="center"> <img src="../pic/stl-4-13.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-13.png"/> </div>
 
 * [pop_heap](tass-sgi-stl-2.91.57-source/stl_heap.h#L124)（在此之后应该pop_back）
     - [__pop_heap_aux](tass-sgi-stl-2.91.57-source/stl_heap.h#L118)
         + [__pop_heap](tass-sgi-stl-2.91.57-source/stl_heap.h#L110)
             * [__adjust_heap](tass-sgi-stl-2.91.57-source/stl_heap.h#L91)
     
-    <div align="center"> <img src="../pic/stl-4-12.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-12.png"/> </div>
 
 * [sort_heap](tass-sgi-stl-2.91.57-source/stl_heap.h#L209)
-    
-    <div align="center"> <img src="../pic/stl-4-11.png"/> </div>
+  
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-11.png"/> </div>
 
 * [make_heap](tass-sgi-stl-2.91.57-source/stl_heap.h#L184)
     - [__make_heap](tass-sgi-stl-2.91.57-source/stl_heap.h#L189)
@@ -1245,7 +1247,7 @@ SGI STL中[slist的定义](tass-sgi-stl-2.91.57-source/stl_slist.h#L175)
 
 ### 8.1 slist的节点
 
-<div align="center"> <img src="../pic/stl-4-9.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-9.png"/> </div>
 
 节点相关的结构：
 
@@ -1290,7 +1292,7 @@ inline size_t __slist_size(__slist_node_base *node)
 
 ### 8.2 slist的迭代器
 
-<div align="center"> <img src="../pic/stl-4-10.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-10.png"/> </div>
 
 迭代器的定义如下：
 
@@ -1354,7 +1356,7 @@ struct __slist_iterator : public __slist_iterator_base
 
 # 五.关联容器
 
-<div align="center"> <img src="../pic/stl-4-1.jpeg"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-4-1.jpeg"/> </div>
 
 标准的STL关联容器分为set(集合)和map(映射表)两大类，以及这两大类的衍生体multiset(多键集合)和multimap(多键映射表)。这些容器的底层机制均以RB-tree(红黑树)完成。RB-tree也是一个独立容器，但并不开放给外界使用
 
@@ -1410,7 +1412,7 @@ struct __rb_tree_node : public __rb_tree_node_base
 
 SGI将RB-tree迭代器实现为两层：
 
-<div align="center"> <img src="../pic/stl-5-1.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-5-1.png"/> </div>
 
 RB-tree迭代器属于双向迭代器，但不具备随机定位能力。前进操作operator++()调用了基类迭代器的increment()，后退操作operator--()调用了基类迭代器的decrement()。前进或后退的举止行为完全依据二叉搜索树的节点排列法则
 
@@ -1637,7 +1639,7 @@ multimap的特性及用法和map完全相同，唯一的差别在于它允许键
 
 ## 6.hashtable
 
-<div align="center"> <img src="../pic/stl-5-2.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-5-2.png"/> </div>
 
 SGI STL中以开哈希实现hash table，hash table表格中的元素为桶，每个桶中包含了哈希到这个桶中的节点，节点定义如下：
 
@@ -1882,10 +1884,10 @@ hash_multimap和hash_map实现上的唯一差别在于，前者的元素插入�
 
 # 六.算法
 
-<div align="center"> <img src="../pic/stl-6-1.png"/> </div>
-<div align="center"> <img src="../pic/stl-6-2.png"/> </div>
-<div align="center"> <img src="../pic/stl-6-3.png"/> </div>
-<div align="center"> <img src="../pic/stl-6-4.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-1.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-2.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-3.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-4.png"/> </div>
 
 ## 1.区间拷贝
 
@@ -1893,7 +1895,7 @@ hash_multimap和hash_map实现上的唯一差别在于，前者的元素插入�
 
 SGI STL的copy算法用尽各种办法，包括函数重载、类型特性、偏特化等编程技巧来尽可能地加强效率
 
-<div align="center"> <img src="../pic/stl-6-5.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-5.png"/> </div>
 
 * 泛化版本
     - [copy](tass-sgi-stl-2.91.57-source/stl_algobase.h#L177)
@@ -1913,7 +1915,7 @@ SGI STL的copy算法用尽各种办法，包括函数重载、类型特性、偏
 
 copy将输入区间```[first,last)```内的元素复制到输出区间```[result,result+(last-first))```内，也就是说，它会执行赋值操作```*result = *first,*(result+1) = *(first+1),...```依次类推。返回一个迭代器：```result+(last-first)```。copy对其template参数所要求的条件非常宽松。其输入区间只需由inputIterators构成即可，输出区间只需要由OutputIterator构成即可。这**意味着可以使用copy算法，将任何容器的任何一段区间的内容，复制到任何容器的任何一段区间上**
 
-<div align="center"> <img src="../pic/stl-6-6.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-6.png"/> </div>
 
 由于拷贝的顺序，对于没有使用memmove()的版本，要特别注意目的区间与源区间重合的情况。memmove()能处理区间重合的情况
 
@@ -1923,7 +1925,7 @@ copy会为输出区间内的元素赋予新值，而不是产生新的元素。�
 
 copy_backward将```[first,last)```区间的每一个元素，以逆行的方向复制到以result-1为起点，方向亦为逆行的区间上。换句话说，copy_backward算法会执行赋值操作```*(result-1) = *(last - 1),*(result-2) = *(last - 2),...```以此类推，返回一个迭代器：```result-(last-first)```
 
-<div align="center"> <img src="../pic/stl-6-7.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-7.png"/> </div>
 
 copy_backward所接受的迭代器必须是BidirectionalIterators，才能够“倒行逆施”
 
@@ -1939,7 +1941,7 @@ s1和s2内的每个元素都不需要唯一，因此，如果某个值在s1出�
 
 SGI SLT中[set_union的实现](tass-sgi-stl-2.91.57-source/stl_algo.h#L2104)，操作示例如下：
 
-<div align="center"> <img src="../pic/stl-6-8.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-8.png"/> </div>
 
 ### 2.2 set_intersection
 
@@ -1947,7 +1949,7 @@ SGI SLT中[set_union的实现](tass-sgi-stl-2.91.57-source/stl_algo.h#L2104)，�
 
 SGI SLT中[set_intersection的实现](tass-sgi-stl-2.91.57-source/stl_algo.h#L2155)，操作示例如下：
 
-<div align="center"> <img src="../pic/stl-6-9.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-9.png"/> </div>
 
 ### 2.3 set_difference
 
@@ -1955,7 +1957,7 @@ SGI SLT中[set_intersection的实现](tass-sgi-stl-2.91.57-source/stl_algo.h#L21
 
 SGI SLT中[set_difference的实现](tass-sgi-stl-2.91.57-source/stl_algo.h#L2195)，操作示例如下：
 
-<div align="center"> <img src="../pic/stl-6-10.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-10.png"/> </div>
 
 ### 2.4 set_symmetric_difference
 
@@ -1965,7 +1967,7 @@ SGI SLT中[set_difference的实现](tass-sgi-stl-2.91.57-source/stl_algo.h#L2195
 
 SGI SLT中[set_symmetric_difference的实现](tass-sgi-stl-2.91.57-source/stl_algo.h#L2235)，操作示例如下：
 
-<div align="center"> <img src="../pic/stl-6-11.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-11.png"/> </div>
 
 ## 3.排序sort
 
@@ -2037,7 +2039,7 @@ STL的sort算法，数据量大时采用Quick Sort，分段递归排序。一旦
     - [generate_n](tass-sgi-stl-2.91.57-source/stl_algo.h#L363)（将仿函数gen的运算结果赋值到迭代器first开始的n个元素上）
     - [partition](tass-sgi-stl-2.91.57-source/stl_algo.h#L752)（不保证元素的原始相对位置）
 
-    <div align="center"> <img src="../pic/stl-6-14.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-14.png"/> </div>
 
     - [stable_partition](tass-sgi-stl-2.91.57-source/stl_algo.h#L849)（保留元素的原始相对位置）
     - [remove](tass-sgi-stl-2.91.57-source/stl_algo.h#L392)（区间大小并不发送变化，需要移除的元素会被后面的覆盖，区间尾部会有残余，返回指向第一个残余元素的迭代器）
@@ -2045,7 +2047,7 @@ STL的sort算法，数据量大时采用Quick Sort，分段递归排序。一旦
     - [remove_if](tass-sgi-stl-2.91.57-source/stl_algo.h#L400)
         + [remove_copy_if](tass-sgi-stl-2.91.57-source/stl_algo.h#L381)
 
-    <div align="center"> <img src="../pic/stl-6-15.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-15.png"/> </div>
 
     - [replace](tass-sgi-stl-2.91.57-source/stl_algo.h#L325)
     - [replace_copy](tass-sgi-stl-2.91.57-source/stl_algo.h#L339)
@@ -2058,11 +2060,11 @@ STL的sort算法，数据量大时采用Quick Sort，分段递归排序。一旦
     - [rotate]()（将[first,middle)和[middle,last)的元素互换，middle所指元素将成为容器第一个元素）
         + 迭代器为向前迭代器：[__rotate](tass-sgi-stl-2.91.57-source/stl_algo.h#L533)
 
-        <div align="center"> <img src="../pic/stl-6-16.png"/> </div>
+        <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-16.png"/> </div>
 
         + 迭代器为双向迭代器：[__rotate](tass-sgi-stl-2.91.57-source/stl_algo.h#L549)
 
-        <div align="center"> <img src="../pic/stl-6-17.png"/> </div>
+        <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-17.png"/> </div>
 
         + 迭代器为随机迭代器：[__rotate](tass-sgi-stl-2.91.57-source/stl_algo.h#L586)
             * [__gcd](tass-sgi-stl-2.91.57-source/stl_algo.h#L558)
@@ -2083,13 +2085,13 @@ STL的sort算法，数据量大时采用Quick Sort，分段递归排序。一旦
         + [版本一](tass-sgi-stl-2.91.57-source/stl_algo.h#L2076)
         + [版本二](tass-sgi-stl-2.91.57-source/stl_algo.h#L2090)
 
-    <div align="center"> <img src="../pic/stl-6-12.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-12.png"/> </div>
 
     - merged（合并两个区间，置于另一段空间，返回指向结果序列最后元素下一位位置的迭代器）
         + [版本一](tass-sgi-stl-2.91.57-source/stl_algo.h#L1761)
         + [版本二](tass-sgi-stl-2.91.57-source/stl_algo.h#L1780)（允许指定操作）
 
-    <div align="center"> <img src="../pic/stl-6-13.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-13.png"/> </div>
     
     - [swap_ranges](tass-sgi-stl-2.91.57-source/stl_algo.h#L242)（将区间一的元素与first2开始等个数的元素互换）
 
@@ -2130,7 +2132,7 @@ STL的sort算法，数据量大时采用Quick Sort，分段递归排序。一旦
         + [版本二](tass-sgi-stl-2.91.57-source/stl_algo.h#L1289)（运行指定比较操作）
             * [__partial_sort](tass-sgi-stl-2.91.57-source/stl_algo.h#L1279)
         
-        <div align="center"> <img src="../pic/stl-6-13.png"/> </div>
+        <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-13.png"/> </div>
 
     - partial_sort_copy
         + [版本一](tass-sgi-stl-2.91.57-source/stl_algo.h#L1322)
@@ -2140,21 +2142,21 @@ STL的sort算法，数据量大时采用Quick Sort，分段递归排序。一旦
             * 有额外的缓冲区辅助：[__merge_adaptive](tass-sgi-stl-2.91.57-source/stl_algo.h#L1982)
                 - 当序列1较小，且缓冲区足够容纳序列1
 
-                <div align="center"> <img src="../pic/stl-6-18.png"/> </div>
+                <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-18.png"/> </div>
 
                 - 当序列2较小，且缓冲区足够容纳序列2
 
-                <div align="center"> <img src="../pic/stl-6-19.png"/> </div>
+                <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-19.png"/> </div>
 
                 - 当缓冲区不足以容纳序列1和序列2
                     [__rotate_adaptive](tass-sgi-stl-2.91.57-source/stl_algo.h#L1867)
 
-                <div align="center"> <img src="../pic/stl-6-20.png"/> </div>
+                <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-20.png"/> </div>
 
     - [nth_element](tass-sgi-stl-2.91.57-source/stl_algo.h#L1380)
         + [__nth_element](tass-sgi-stl-2.91.57-source/stl_algo.h#L1365)
 
-    <div align="center"> <img src="../pic/stl-6-21.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-6-21.png"/> </div>
 
     <br>
 
@@ -2166,7 +2168,7 @@ STL的sort算法，数据量大时采用Quick Sort，分段递归排序。一旦
 
 就实现而言，仿函数其实就是一个“行为类似函数”的对象，为了能够“行为类似函数”，其类别定义中必须自定义function call运算子。拥有这样的运算子后，就可以在仿函数的对象后面加上一对小括号，以此调用仿函数所定义的operator()
 
-<div align="center"> <img src="../pic/stl-7-1.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-7-1.png"/> </div>
 
 STL仿函数的分类，若以操作数的个数划分，可分为一元和二元仿函数，若以功能划分，可分为算术运算，关系运算，逻辑运算三大类
 
@@ -2392,7 +2394,7 @@ STL提供了许多应用于迭代器身上的适配器，包括：
 
     由于上面3个迭代器的使用接口不是十分直观，因此，STL提供了三个相应函数用以获取相应迭代器：
 
-    <div align="center"> <img src="../pic/stl-8-2.png"/> </div>
+    <div align="center"> <img src="./STL源码剖析（转）.assets/stl-8-2.png"/> </div>
 
 2. [reverse iterators](#22-reverse-iterators)：可以将一般迭代器的行进方向反转
 3. [iostream iterators](#23-iostream-iterators)：可以将迭代器绑定到某个iostream对象身上
@@ -2559,7 +2561,7 @@ public:
 
 正向迭代器和逆向迭代器的逻辑位置如下图：
 
-<div align="center"> <img src="../pic/stl-8-3.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-8-3.png"/> </div>
 
 具有这样的逻辑位置关系，当我们将一个正向迭代器区间转换为一个逆向迭代器区间后，不必再有任何额外处理，就可以让接受这个逆向迭代器区间的算法，以相反的元素次序处理区间中的每一个元素
 
@@ -2702,7 +2704,7 @@ public:
 
 下图展示了copy()和istream_iterator共同合作的例子：
 
-<div align="center"> <img src="../pic/stl-8-4.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-8-4.png"/> </div>
 
 #### 2）ostream_iterator
 
@@ -2740,7 +2742,7 @@ public:
 
 下图展示了copy()和ostream_iterator共同合作的例子：
 
-<div align="center"> <img src="../pic/stl-8-5.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-8-5.png"/> </div>
 
 ## 3.函数适配器
 
@@ -2748,7 +2750,7 @@ public:
 
 **函数适配器的价值**：通过它们之间的绑定、组合、修饰能力，几乎可以无限制地创造出各种可能的表达式，搭配STL算法一起演出。下表是STL函数适配器一览表：
 
-<div align="center"> <img src="../pic/stl-8-1.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-8-1.png"/> </div>
 
 **适配操作包括**：
 
@@ -2761,7 +2763,7 @@ public:
 
 下图是count_if()和bind2nd(less<int>(),12)的搭配实例；
 
-<div align="center"> <img src="../pic/stl-8-6.png"/> </div>
+<div align="center"> <img src="./STL源码剖析（转）.assets/stl-8-6.png"/> </div>
 
 ### 3.1 not1和not2
 
