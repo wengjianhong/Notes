@@ -47,5 +47,5 @@
 
 ## 读书笔记
 
-- [《SRE Google运维解密》](./读书笔记/SRE Google运维之道)
+- [《SRE:Google运维解密》](./读书笔记/SRE:Google运维之道)
 
