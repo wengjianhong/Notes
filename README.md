@@ -14,7 +14,7 @@
 
 ## [开源代码](./开源代码)
 
-- [Redis](./开源代码/Redis)
+- [Redis](./开源代码/redis)
 
 
 
@@ -25,6 +25,7 @@
   - [《C++Primer-5th》](./编程/C++/《C++Primer-5th》)
   - [《C++基础与提高》](./编程/C++/《C++基础与提高》)
 - [CMake](./编程/CMake)
+- [GCC](./编程/GCC)
 - [GDB](./编程/GDB)
 - [GTest](./编程/GTest)
 - [分布式](./编程/分布式)
@@ -44,16 +45,7 @@
 
 
 
-## [面经](./面经)
+## 读书笔记
 
-- [C++](./面经/C++.md)
-- [网络](./面经/网络.md)
-- [操作系统](./面经/操作系统.md)
-- [数学智力题](./面经/数学智力题.md)
-
-
-
-转载：https://github.com/arkingc/note/tree/master/interview
-
-更多面经：https://github.com/wengjianhong/Kunlun/tree/master/PDF/%E9%9D%A2%E7%BB%8F
+- [《SRE:Google运维解密》](./读书笔记/SRE:Google运维之道)
 
